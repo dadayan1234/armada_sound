@@ -341,11 +341,5 @@ def index() -> rx.Component:
     )
 
 # --- Konfigurasi Aplikasi ---
-app = rx.App(
-    theme=rx.theme(
-        appearance="light",
-        accent_color="blue",
-        radius="medium"
-    )
-)
+app = rx.App()
 app.add_page(index, route="/")
