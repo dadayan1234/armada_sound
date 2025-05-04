@@ -1,3 +1,4 @@
+import asyncio
 import reflex as rx
 import datetime
 
@@ -21,6 +22,57 @@ import datetime
 #     pass # Belum ada state yang kompleks untuk landing page sederhana
 
 # --- Halaman Utama (Landing Page) ---
+
+BANNER_IMAGES = [
+    "/img/foto_1.jpg",
+    "/img/foto_2.webp",
+    "/img/foto_3.jpg"
+]
+
+# --- State untuk Mengelola Carousel ---
+class CarouselState(rx.State):
+    current_image_index: int = 0
+
+    # Computed variable untuk mendapatkan URL gambar saat ini
+    @rx.var
+    def current_bg_image(self) -> str:
+        # Menggunakan f-string untuk format URL CSS background-image
+        return f"url('{BANNER_IMAGES[self.current_image_index]}')"
+
+    # Event handler untuk tombol next
+    def next_image(self):
+        self.current_image_index = (self.current_image_index + 1) % len(BANNER_IMAGES)
+
+    # Event handler untuk tombol previous
+    def prev_image(self):
+        # Menambahkan len(BANNER_IMAGES) untuk handle indeks negatif saat modulo
+        self.current_image_index = (self.current_image_index - 1 + len(BANNER_IMAGES)) % len(BANNER_IMAGES)
+
+    # --- TODO (Opsional): Fungsi untuk auto-play ---
+    async def auto_play_carousel(self):
+        """Fungsi background yang mengganti gambar setiap 3 detik."""
+        while True:
+            # Cek apakah kita masih berada di halaman utama sebelum melanjutkan
+            # Ini penting agar loop berhenti jika user pindah halaman
+            # Pastikan path '/' sesuai dengan route halaman utama Anda
+            if self.router.page.path != "/":
+                # print("Auto-play stopped: Navigated away from index.") # Debugging (opsional)
+                break # Keluar dari loop jika tidak di halaman utama
+
+            await asyncio.sleep(3) # Tunggu selama 3 detik
+
+            # Cek lagi setelah sleep, kalau user pindah halaman saat sleep
+            if self.router.page.path == "/":
+                # Panggil next_image HANYA jika masih di halaman utama
+                self.next_image()
+                # print(f"Auto-played: index {self.current_image_index}") # Debugging (opsional)
+            else:
+                # print("Auto-play stopped during sleep: Navigated away.") # Debugging (opsional)
+                break # Keluar dari loop jika sudah pindah halaman
+
+# --- Komponen Helper (jika diperlukan nanti) ---
+# ... (komponen helper lain jika ada)
+
 @rx.page(title="ARMADA SOUND - Solusi Sound System Profesional")
 def index() -> rx.Component:
     current_year = datetime.date.today().year
@@ -29,50 +81,115 @@ def index() -> rx.Component:
     phone_number = "+6282233245208" # Ganti dengan nomor telepon Anda
 
     return rx.vstack(
-        # --- Bagian Hero ---
+        # --- Bagian Hero (Carousel) ---
         rx.box(
-            rx.vstack(
-                # Placeholder Logo
-                rx.image(src="/logo_placeholder.png", height="80px", margin_bottom="20px", alt="Logo ARMADA SOUND"),
-                rx.heading(
-                    "ARMADA SOUND",
-                    size="9",
-                    color="white",
-                    text_align="center",
-                ),
-                rx.heading(
-                    "Solusi Sound System Profesional untuk Setiap Acara Anda",
-                    size="6",
-                    color="gray.200",
-                    text_align="center",
-                    margin_top="10px",
-                    max_width="700px",
-                ),
-                rx.text(
-                    "Hadirkan kualitas suara jernih dan menggelegar untuk hajatan, konser, pengajian, organ tunggal, dan momen spesial lainnya.",
-                    color="gray.300",
-                    text_align="center",
-                    margin_top="20px",
-                    max_width="600px",
-                ),
-                rx.link(
-                    rx.button(
-                        "Hubungi Kami Sekarang",
-                        size="3",
-                        margin_top="30px",
-                        color_scheme="blue", # Ganti skema warna sesuai selera
+            # Lapisan Konten (Overlay) dengan Efek Blur
+            rx.box(
+                rx.vstack(
+                    # Placeholder Logo (pastikan path benar jika Anda punya logo)
+                    rx.image(src="/img/logo.png", # Ganti jika nama file beda
+                             height="200px",
+                             margin_bottom="20px",
+                             alt="Logo ARMADA SOUND"),
+                    rx.heading(
+                        "ARMADA SOUND",
+                        size="9",
+                        color="white", # Pastikan teks kontras dengan background
+                        text_align="center",
+                        text_shadow="0 1px 3px rgba(0,0,0,0.5)", # Bayangan teks agar lebih mudah dibaca
                     ),
-                    href=f"https://wa.me/{whatsapp_number.replace('+', '')}?text=Halo%20ARMADA%20SOUND,%20saya%20tertarik%20dengan%20layanan%20sound%20system%20Anda.",
-                    is_external=True,
+                    rx.heading(
+                        "Solusi Sound System Profesional untuk Setiap Acara Anda",
+                        size="6",
+                        color="white", # Warna lebih terang
+                        text_align="center",
+                        margin_top="10px",
+                        max_width="700px",
+                        text_shadow="0 1px 2px rgba(0,0,0,0.5)",
+                    ),
+                    rx.text(
+                        "Hadirkan kualitas suara jernih dan menggelegar untuk hajatan, konser, pengajian, organ tunggal, dan momen spesial lainnya.",
+                        color="white", # Warna lebih terang
+                        text_align="center",
+                        margin_top="20px",
+                        max_width="600px",
+                        text_shadow="0 1px 2px rgba(0,0,0,0.5)",
+                    ),
+                    rx.link(
+                        rx.button(
+                            "Hubungi Kami Sekarang",
+                            size="3",
+                            margin_top="30px",
+                            color_scheme="blue",
+                        ),
+                        href=f"https://wa.me/{whatsapp_number.replace('+', '')}?text=Halo%20ARMADA%20SOUND,%20saya%20tertarik%20dengan%20layanan%20sound%20system%20Anda.",
+                        is_external=True,
+                    ),
+                    spacing="4",
+                    align="center",
+                    justify="center",
+                    # Beri padding agar konten tidak terlalu mepet tepi
+                    padding_x="30px",
+                    padding_y="50px",
                 ),
-                spacing="4",
-                align="center",
-                justify="center",
-                padding_x="20px",
-                padding_y="80px", # Beri padding vertikal lebih banyak
+                # Styling untuk lapisan konten
+                position="relative", # Agar konten tidak terpengaruh posisi absolut tombol
+                z_index=1, # Di atas background, di bawah tombol navigasi
+                width="100%",
+                height="100%",
+                display="flex", # Menggunakan flexbox untuk centering vertikal/horizontal
+                align_items="center",
+                justify_content="center",
+                # --- EFEK BLUR & Overlay ---
+                background_color="rgba(0, 0, 0, 0.35)", # Warna gelap transparan (sesuaikan opacity)
+                backdrop_filter="blur(10px)", # Efek blur untuk background di belakangnya (sesuaikan nilai blur)
+                border_radius="inherit", # Mengikuti radius container utama jika ada
             ),
-            bg="linear-gradient(145deg, #1a237e, #3949ab)", # Contoh gradient biru tua
+
+            # Tombol Navigasi Carousel
+            # Tombol Previous
+            rx.icon_button(
+                "chevron-left",
+                on_click=CarouselState.prev_image,
+                position="absolute",
+                left="15px", # Jarak dari kiri
+                top="50%", # Posisikan di tengah vertikal
+                transform="translateY(-50%)", # Koreksi posisi vertikal
+                z_index=2, # Di atas lapisan konten
+                color_scheme="gray", # Skema warna tombol
+                variant="soft", # Tampilan tombol (soft, ghost, solid, outline)
+                size="3", # Ukuran tombol
+                border_radius="full", # Buat tombol bulat
+                opacity=0.7,
+                 _hover={"opacity": 1}
+            ),
+            # Tombol Next
+            rx.icon_button(
+                "chevron-right",
+                on_click=CarouselState.next_image,
+                position="absolute",
+                right="15px", # Jarak dari kanan
+                top="50%",
+                transform="translateY(-50%)",
+                z_index=2,
+                color_scheme="gray",
+                variant="soft",
+                size="3",
+                border_radius="full",
+                opacity=0.7,
+                 _hover={"opacity": 1}
+            ),
+
+            # --- Styling Container Utama Hero ---
+            position="relative",
             width="100%",
+            min_height="65vh",
+            background_image=CarouselState.current_bg_image,
+            background_size="cover",
+            background_position="center center",
+            overflow="hidden",
+            # --- TAMBAHKAN on_mount UNTUK MEMULAI AUTO-PLAY ---
+            on_mount=CarouselState.auto_play_carousel,
         ),
 
         # --- Bagian Layanan/Keunggulan ---
@@ -161,28 +278,59 @@ def index() -> rx.Component:
         ),
 
         # --- Bagian Galeri (Placeholder) ---
-        rx.vstack(
-            rx.heading("Galeri Acara Kami", size="7", margin_bottom="20px"),
-            rx.text(
-                "Lihat bagaimana kami memeriahkan berbagai acara dengan kualitas suara terbaik.",
-                margin_bottom="30px",
-                text_align="center",
-                max_width="700px",
+        # rx.vstack(
+        #     rx.heading("Galeri Acara Kami", size="7", margin_bottom="20px"),
+        #     rx.text(
+        #         "Lihat bagaimana kami memeriahkan berbagai acara dengan kualitas suara terbaik.",
+        #         margin_bottom="30px",
+        #         text_align="center",
+        #         max_width="700px",
+        #     ),
+        #     rx.hstack(
+        #         # Placeholder untuk 3 gambar
+        #         rx.box(rx.text("Foto Acara 1"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
+        #         rx.box(rx.text("Foto Acara 2"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
+        #         rx.box(rx.text("Foto Acara 3"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
+        #         spacing="6",
+        #         justify="center",
+        #         flex_wrap="wrap", # Agar responsif
+        #     ),
+        #     align="center",
+        #     padding_y="60px",
+        #     padding_x="20px",
+        #     width="100%",
+        #     bg="gray.50",
+        # ),
+        
+        rx.hstack(
+            # Gambar Galeri Asli
+            rx.image(
+                src="/img/foto_1.jpg", # Path ke gambar 1
+                alt="Dokumentasi acara hajatan dengan ARMADA SOUND",
+                height="200px",
+                width="300px",
+                border_radius="md",
+                object_fit="cover" # 'cover' mengisi area, 'contain' menampilkan seluruh gambar
             ),
-            rx.hstack(
-                # Placeholder untuk 3 gambar
-                rx.box(rx.text("Foto Acara 1"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-                rx.box(rx.text("Foto Acara 2"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-                rx.box(rx.text("Foto Acara 3"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-                spacing="6",
-                justify="center",
-                flex_wrap="wrap", # Agar responsif
+            rx.image(
+                src="/img/foto_2.webp", # Path ke gambar 2
+                alt="Dokumentasi konser musik dengan ARMADA SOUND",
+                height="200px",
+                width="300px",
+                border_radius="md",
+                object_fit="cover"
             ),
-            align="center",
-            padding_y="60px",
-            padding_x="20px",
-            width="100%",
-            bg="gray.50",
+            rx.image(
+                src="/img/foto_3.png", # Path ke gambar 3
+                alt="Dokumentasi pengajian akbar dengan ARMADA SOUND",
+                height="200px",
+                width="300px",
+                border_radius="md",
+                object_fit="cover"
+            ),
+            spacing="6",
+            justify="center",
+            flex_wrap="wrap", # Agar responsif
         ),
 
         # --- Bagian Testimoni (Placeholder) ---
