@@ -1,139 +1,84 @@
-import asyncio
 import reflex as rx
 import datetime
-from typing import Optional
 
-# --- Halaman Utama (Landing Page) ---
-
+# Define the banner images as a regular Python list
 BANNER_IMAGES = [
-    "/img/foto_1.jpg",
-    "/img/foto_2.webp",
-    "/img/foto_3.png",
+    "/img/foto_1.jpg", 
+    "/img/foto_2.webp", 
+    "/img/foto_3.png"
 ]
 
-# --- State untuk Mengelola Carousel ---
 class CarouselState(rx.State):
     current_image_index: int = 0
     auto_play: bool = True
 
     @rx.var
     def current_bg_image(self) -> str:
+        # Access the image directly from the list
         return f"url('{BANNER_IMAGES[self.current_image_index]}')"
 
     def next_image(self):
+        # Move to the next image, ensuring the index wraps around
         self.current_image_index = (self.current_image_index + 1) % len(BANNER_IMAGES)
 
     def prev_image(self):
+        # Move to the previous image, ensuring the index wraps around
         self.current_image_index = (self.current_image_index - 1 + len(BANNER_IMAGES)) % len(BANNER_IMAGES)
 
     def toggle_auto_play(self):
+        # Toggle the autoplay state
         self.auto_play = not self.auto_play
-
-    async def auto_play_images(self):
-        while True:
-            if self.auto_play:
-                await asyncio.sleep(3)
-                self.next_image()
-            else:
-                await asyncio.sleep(0.1)
 
 @rx.page(title="ARMADA SOUND - Solusi Sound System Profesional")
 def index() -> rx.Component:
     current_year = datetime.date.today().year
-    whatsapp_number = "+6282233245208" # Ganti dengan nomor WA Anda
-    email_address = "info@armadasound.com" # Ganti dengan email Anda
-    phone_number = "+6282233245208" # Ganti dengan nomor telepon Anda
+    whatsapp_number = "+6282233245208"
+    email_address = "info@armadasound.com"
+    phone_number = "+6282233245208"
 
     return rx.vstack(
         # --- Bagian Hero (Carousel) ---
         rx.box(
-            # Lapisan Konten (Overlay) dengan Efek Blur
+            # Content Layer
             rx.box(
                 rx.vstack(
-                    # Placeholder Logo (pastikan path benar jika Anda punya logo)
-                    rx.image(src="/img/logo.png", # Ganti jika nama file beda
-                             height="200px",
+                    rx.image(src="/img/logo.png",
+                             height="300px",
                              margin_bottom="20px",
                              alt="Logo ARMADA SOUND"),
-                    rx.heading(
-                        "ARMADA SOUND",
-                        size="9",
-                        color="white", # Pastikan teks kontras dengan background
-                        text_align="center",
-                        text_shadow="0 1px 3px rgba(0,0,0,0.5)", # Bayangan teks agar lebih mudah dibaca
-                    ),
-                    rx.heading(
-                        "Solusi Sound System Profesional untuk Setiap Acara Anda",
-                        size="6",
-                        color="white", # Warna lebih terang
-                        text_align="center",
-                        margin_top="10px",
-                        max_width="700px",
-                        text_shadow="0 1px 2px rgba(0,0,0,0.5)",
-                    ),
-                    rx.text(
-                        "Hadirkan kualitas suara jernih dan menggelegar untuk hajatan, konser, pengajian, organ tunggal, dan momen spesial lainnya.",
-                        color="white", # Warna lebih terang
-                        text_align="center",
-                        margin_top="20px",
-                        max_width="600px",
-                        text_shadow="0 1px 2px rgba(0,0,0,0.5)",
-                    ),
+                    rx.heading("ARMADA SOUND", size="9", color="white"),
+                    rx.heading("Solusi Sound System Profesional untuk Setiap Acara Anda", 
+                              size="6", color="white"),
+                    rx.text("Hadirkan kualitas suara jernih dan menggelegar untuk hajatan, konser, pengajian, organ tunggal, dan momen spesial lainnya.",
+                            color="white"),
                     rx.link(
-                        rx.button(
-                            "Hubungi Kami Sekarang",
-                            size="3",
-                            margin_top="30px",
-                            color_scheme="blue",
-                        ),
+                        rx.button("Hubungi Kami Sekarang", size="3", margin_top="30px", color_scheme="blue"),
                         href=f"https://wa.me/{whatsapp_number.replace('+', '')}?text=Halo%20ARMADA%20SOUND,%20saya%20tertarik%20dengan%20layanan%20sound%20system%20Anda.",
                         is_external=True,
                     ),
                     spacing="4",
                     align="center",
                     justify="center",
-                    # Beri padding agar konten tidak terlalu mepet tepi
                     padding_x="30px",
                     padding_y="50px",
                 ),
-                # Styling untuk lapisan konten
-                position="relative", # Agar konten tidak terpengaruh posisi absolut tombol
-                z_index=1, # Di atas background, di bawah tombol navigasi
+                position="relative",
+                z_index=1,
                 width="100%",
                 height="100%",
-                display="flex", # Menggunakan flexbox untuk centering vertikal/horizontal
+                display="flex",
                 align_items="center",
                 justify_content="center",
-                # --- EFEK BLUR & Overlay ---
-                background_color="rgba(0, 0, 0, 0.35)", # Warna gelap transparan (sesuaikan opacity)
-                backdrop_filter="blur(10px)", # Efek blur untuk background di belakangnya (sesuaikan nilai blur)
-                border_radius="inherit", # Mengikuti radius container utama jika ada
-                transition="background-image 1s ease-in-out",
+                background_color="rgba(0, 0, 0, 0.35)",
+                backdrop_filter="blur(10px)",
             ),
 
-            # Tombol Navigasi Carousel
-            # Tombol Previous
+            # Navigation Buttons
             rx.icon_button(
                 "chevron-left",
                 on_click=CarouselState.prev_image,
                 position="absolute",
-                left="15px", # Jarak dari kiri
-                top="50%", # Posisikan di tengah vertikal
-                transform="translateY(-50%)", # Koreksi posisi vertikal
-                z_index=2, # Di atas lapisan konten
-                color_scheme="gray", # Skema warna tombol
-                variant="soft", # Tampilan tombol (soft, ghost, solid, outline)
-                size="3", # Ukuran tombol
-                border_radius="full", # Buat tombol bulat
-                opacity=0.7,
-                 _hover={"opacity": 1}
-            ),
-            # Tombol Next
-            rx.icon_button(
-                "chevron-right",
-                on_click=CarouselState.next_image,
-                position="absolute",
-                right="15px", # Jarak dari kanan
+                left="15px",
                 top="50%",
                 transform="translateY(-50%)",
                 z_index=2,
@@ -142,7 +87,22 @@ def index() -> rx.Component:
                 size="3",
                 border_radius="full",
                 opacity=0.7,
-                 _hover={"opacity": 1}
+                _hover={"opacity": 1}
+            ),
+            rx.icon_button(
+                "chevron-right",
+                on_click=CarouselState.next_image,
+                position="absolute",
+                right="15px",
+                top="50%",
+                transform="translateY(-50%)",
+                z_index=2,
+                color_scheme="gray",
+                variant="soft",
+                size="3",
+                border_radius="full",
+                opacity=0.7,
+                _hover={"opacity": 1}
             ),
 
             position="relative",
@@ -155,6 +115,21 @@ def index() -> rx.Component:
             overflow="hidden",
             transition="background-image 1s ease-in-out",
         ),
+        
+        # Auto-play script
+        rx.script("""
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    window.dispatchEvent(new CustomEvent("reflex:event", {
+                        detail: {
+                            event: "carousel_state.next_image",
+                            payload: {}
+                        }
+                    }));
+                }
+            }, 3000);
+        """),
+
 
         # --- Bagian Layanan/Keunggulan ---
         rx.vstack(
@@ -359,20 +334,6 @@ def index() -> rx.Component:
              rx.text(f"© {current_year} ARMADA SOUND. All Rights Reserved.", font_size="0.8em", color="gray.500", text_align="center"),
              padding_y="30px", width="100%", bg="gray.900", color="white"
          ),
-         
-         rx.script("""
-                    function waitForRxReady() {
-                        if (window.__rx && typeof window.__rx.emit === 'function') {
-                            setInterval(() => {
-                                window.__rx.emit('CarouselState.next_image');
-                            }, 3000);
-                        } else {
-                            requestAnimationFrame(waitForRxReady);
-                        }
-                    }
-                    waitForRxReady();
-                """),
-
 
         width="100%",
         spacing="0",
