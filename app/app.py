@@ -1,6 +1,8 @@
 import asyncio
 import reflex as rx
 import datetime
+from typing import Optional
+
 # --- Halaman Utama (Landing Page) ---
 
 BANNER_IMAGES = [
@@ -12,7 +14,7 @@ BANNER_IMAGES = [
 # --- State untuk Mengelola Carousel ---
 class CarouselState(rx.State):
     current_image_index: int = 0
-    _auto_play_task = None  # Ini bukan state var, hanya internal reference
+    auto_play: bool = True
 
     @rx.var
     def current_bg_image(self) -> str:
@@ -24,41 +26,16 @@ class CarouselState(rx.State):
     def prev_image(self):
         self.current_image_index = (self.current_image_index - 1 + len(BANNER_IMAGES)) % len(BANNER_IMAGES)
 
-    async def auto_play_carousel(self):
-        """Fungsi background yang mengganti gambar setiap 3 detik."""
-        try:
-            while True:
+    def toggle_auto_play(self):
+        self.auto_play = not self.auto_play
+
+    async def auto_play_images(self):
+        while True:
+            if self.auto_play:
                 await asyncio.sleep(3)
-                if self.router.page.path == "/":
-                    self.next_image()
-                else:
-                    break
-        except asyncio.CancelledError:
-            pass
-
-    async def start_auto_play(self):
-        """Mulai auto-play dan simpan task reference secara internal."""
-        if self._auto_play_task is None or self._auto_play_task.done():
-            self._auto_play_task = asyncio.create_task(self.auto_play_carousel())
-
-    async def stop_auto_play(self):
-        """Hentikan auto-play jika sedang berjalan."""
-        if self._auto_play_task and not self._auto_play_task.done():
-            self._auto_play_task.cancel()
-            try:
-                await self._auto_play_task
-            except asyncio.CancelledError:
-                pass
-
-    async def on_mount(self):
-        await self.start_auto_play()
-
-    async def on_unmount(self):
-        await self.stop_auto_play()
-
-
-# --- Komponen Helper (jika diperlukan nanti) ---
-# ... (komponen helper lain jika ada)
+                self.next_image()
+            else:
+                await asyncio.sleep(0.1)
 
 @rx.page(title="ARMADA SOUND - Solusi Sound System Profesional")
 def index() -> rx.Component:
@@ -168,16 +145,19 @@ def index() -> rx.Component:
                  _hover={"opacity": 1}
             ),
 
-            # --- Styling Container Utama Hero ---
+            # Styling
             position="relative",
             width="100%",
             min_height="65vh",
             background_image=CarouselState.current_bg_image,
             background_size="cover",
-            background_position="center center",
+            background_position="center",
+            background_repeat="no-repeat",
             overflow="hidden",
-            # --- TAMBAHKAN on_mount UNTUK MEMULAI AUTO-PLAY ---
-            on_mount=CarouselState.on_mount,
+            transition="background-image 1s ease-in-out",
+            
+            # Event handler
+            on_mount=CarouselState.auto_play_images,
         ),
 
         # --- Bagian Layanan/Keunggulan ---
@@ -265,35 +245,43 @@ def index() -> rx.Component:
             width="100%",
         ),
         
-        rx.hstack(
-            # Gambar Galeri Asli
-            rx.image(
-                src="/img/foto_1.jpg", # Path ke gambar 1
-                alt="Dokumentasi acara hajatan dengan ARMADA SOUND",
-                height="200px",
-                width="300px",
-                border_radius="md",
-                object_fit="cover" # 'cover' mengisi area, 'contain' menampilkan seluruh gambar
+        # --- Bagian Galeri Foto ---
+        rx.vstack(
+            rx.heading("Galeri Dokumentasi", size="7", margin_bottom="30px"),
+            rx.hstack(
+                rx.image(
+                    src="/img/foto_1.jpg",
+                    alt="Dokumentasi acara hajatan dengan ARMADA SOUND",
+                    height="200px",
+                    width="300px",
+                    border_radius="md",
+                    object_fit="cover"
+                ),
+                rx.image(
+                    src="/img/foto_2.webp",
+                    alt="Dokumentasi konser musik dengan ARMADA SOUND",
+                    height="200px",
+                    width="300px",
+                    border_radius="md",
+                    object_fit="cover"
+                ),
+                rx.image(
+                    src="/img/foto_3.png",
+                    alt="Dokumentasi pengajian akbar dengan ARMADA SOUND",
+                    height="200px",
+                    width="300px",
+                    border_radius="md",
+                    object_fit="cover"
+                ),
+                spacing="6",
+                justify="center",
+                flex_wrap="wrap",
+                width="100%",
             ),
-            rx.image(
-                src="/img/foto_2.webp", # Path ke gambar 2
-                alt="Dokumentasi konser musik dengan ARMADA SOUND",
-                height="200px",
-                width="300px",
-                border_radius="md",
-                object_fit="cover"
-            ),
-            rx.image(
-                src="/img/foto_3.png", # Path ke gambar 3
-                alt="Dokumentasi pengajian akbar dengan ARMADA SOUND",
-                height="200px",
-                width="300px",
-                border_radius="md",
-                object_fit="cover"
-            ),
-            spacing="6",
-            justify="center",
-            flex_wrap="wrap", # Agar responsif
+            align="center",
+            padding_y="60px",
+            padding_x="20px",
+            width="100%",
         ),
 
         # --- Bagian Testimoni (Placeholder) ---
@@ -371,21 +359,13 @@ def index() -> rx.Component:
         ),
 
         # --- Footer ---
-        rx.box(
-            rx.text(
-                f"© {current_year} ARMADA SOUND. All Rights Reserved.",
-                font_size="0.8em",
-                color="gray.500",
-                text_align="center",
-            ),
-            padding_y="30px",
-            width="100%",
-            bg="gray.900",
-            color="white"
-        ),
+         rx.box(
+             rx.text(f"© {current_year} ARMADA SOUND. All Rights Reserved.", font_size="0.8em", color="gray.500", text_align="center"),
+             padding_y="30px", width="100%", bg="gray.900", color="white"
+         ),
 
         width="100%",
-        spacing="0", # Hapus spasi default antar vstack utama
+        spacing="0",
         align="center",
     )
 
@@ -397,5 +377,4 @@ app = rx.App(
         radius="medium"
     )
 )
-app.add_page(index, route="/", on_load=CarouselState.on_mount)
-# Tidak perlu compile() lagi di versi Reflex yang lebih baru jika dijalankan dengan `reflex run`
+app.add_page(index, route="/")
