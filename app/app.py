@@ -145,7 +145,6 @@ def index() -> rx.Component:
                  _hover={"opacity": 1}
             ),
 
-            # Styling
             position="relative",
             width="100%",
             min_height="65vh",
@@ -155,9 +154,6 @@ def index() -> rx.Component:
             background_repeat="no-repeat",
             overflow="hidden",
             transition="background-image 1s ease-in-out",
-            
-            # Event handler
-            on_mount=CarouselState.auto_play_images,
         ),
 
         # --- Bagian Layanan/Keunggulan ---
@@ -363,6 +359,20 @@ def index() -> rx.Component:
              rx.text(f"© {current_year} ARMADA SOUND. All Rights Reserved.", font_size="0.8em", color="gray.500", text_align="center"),
              padding_y="30px", width="100%", bg="gray.900", color="white"
          ),
+         
+         rx.script("""
+                    function waitForRxReady() {
+                        if (window.__rx && typeof window.__rx.emit === 'function') {
+                            setInterval(() => {
+                                window.__rx.emit('CarouselState.next_image');
+                            }, 3000);
+                        } else {
+                            requestAnimationFrame(waitForRxReady);
+                        }
+                    }
+                    waitForRxReady();
+                """),
+
 
         width="100%",
         spacing="0",
