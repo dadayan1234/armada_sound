@@ -1,74 +1,61 @@
 import asyncio
 import reflex as rx
 import datetime
-
-# --- Komponen Helper (jika diperlukan nanti) ---
-# Contoh: Komponen untuk item layanan
-# def service_item(icon: str, title: str, description: str):
-#     return rx.hstack(
-#         rx.icon(tag=icon, size=24, margin_right="10px"),
-#         rx.vstack(
-#             rx.text(title, font_weight="bold"),
-#             rx.text(description, font_size="0.9em", color="gray.600"),
-#             align_items="start",
-#         ),
-#         spacing="4",
-#         align_items="center",
-#         padding_y="2",
-#     )
-
-# --- State (jika butuh interaktivitas lebih lanjut) ---
-# class State(rx.State):
-#     pass # Belum ada state yang kompleks untuk landing page sederhana
-
 # --- Halaman Utama (Landing Page) ---
 
 BANNER_IMAGES = [
     "/img/foto_1.jpg",
     "/img/foto_2.webp",
-    "/img/foto_3.jpg"
+    "/img/foto_3.png",
 ]
 
 # --- State untuk Mengelola Carousel ---
 class CarouselState(rx.State):
     current_image_index: int = 0
+    _auto_play_task = None  # Ini bukan state var, hanya internal reference
 
-    # Computed variable untuk mendapatkan URL gambar saat ini
     @rx.var
     def current_bg_image(self) -> str:
-        # Menggunakan f-string untuk format URL CSS background-image
         return f"url('{BANNER_IMAGES[self.current_image_index]}')"
 
-    # Event handler untuk tombol next
     def next_image(self):
         self.current_image_index = (self.current_image_index + 1) % len(BANNER_IMAGES)
 
-    # Event handler untuk tombol previous
     def prev_image(self):
-        # Menambahkan len(BANNER_IMAGES) untuk handle indeks negatif saat modulo
         self.current_image_index = (self.current_image_index - 1 + len(BANNER_IMAGES)) % len(BANNER_IMAGES)
 
-    # --- TODO (Opsional): Fungsi untuk auto-play ---
     async def auto_play_carousel(self):
         """Fungsi background yang mengganti gambar setiap 3 detik."""
-        while True:
-            # Cek apakah kita masih berada di halaman utama sebelum melanjutkan
-            # Ini penting agar loop berhenti jika user pindah halaman
-            # Pastikan path '/' sesuai dengan route halaman utama Anda
-            if self.router.page.path != "/":
-                # print("Auto-play stopped: Navigated away from index.") # Debugging (opsional)
-                break # Keluar dari loop jika tidak di halaman utama
+        try:
+            while True:
+                await asyncio.sleep(3)
+                if self.router.page.path == "/":
+                    self.next_image()
+                else:
+                    break
+        except asyncio.CancelledError:
+            pass
 
-            await asyncio.sleep(3) # Tunggu selama 3 detik
+    async def start_auto_play(self):
+        """Mulai auto-play dan simpan task reference secara internal."""
+        if self._auto_play_task is None or self._auto_play_task.done():
+            self._auto_play_task = asyncio.create_task(self.auto_play_carousel())
 
-            # Cek lagi setelah sleep, kalau user pindah halaman saat sleep
-            if self.router.page.path == "/":
-                # Panggil next_image HANYA jika masih di halaman utama
-                self.next_image()
-                # print(f"Auto-played: index {self.current_image_index}") # Debugging (opsional)
-            else:
-                # print("Auto-play stopped during sleep: Navigated away.") # Debugging (opsional)
-                break # Keluar dari loop jika sudah pindah halaman
+    async def stop_auto_play(self):
+        """Hentikan auto-play jika sedang berjalan."""
+        if self._auto_play_task and not self._auto_play_task.done():
+            self._auto_play_task.cancel()
+            try:
+                await self._auto_play_task
+            except asyncio.CancelledError:
+                pass
+
+    async def on_mount(self):
+        await self.start_auto_play()
+
+    async def on_unmount(self):
+        await self.stop_auto_play()
+
 
 # --- Komponen Helper (jika diperlukan nanti) ---
 # ... (komponen helper lain jika ada)
@@ -144,6 +131,7 @@ def index() -> rx.Component:
                 background_color="rgba(0, 0, 0, 0.35)", # Warna gelap transparan (sesuaikan opacity)
                 backdrop_filter="blur(10px)", # Efek blur untuk background di belakangnya (sesuaikan nilai blur)
                 border_radius="inherit", # Mengikuti radius container utama jika ada
+                transition="background-image 1s ease-in-out",
             ),
 
             # Tombol Navigasi Carousel
@@ -189,7 +177,7 @@ def index() -> rx.Component:
             background_position="center center",
             overflow="hidden",
             # --- TAMBAHKAN on_mount UNTUK MEMULAI AUTO-PLAY ---
-            on_mount=CarouselState.auto_play_carousel,
+            on_mount=CarouselState.on_mount,
         ),
 
         # --- Bagian Layanan/Keunggulan ---
@@ -276,31 +264,6 @@ def index() -> rx.Component:
             padding_x="20px",
             width="100%",
         ),
-
-        # --- Bagian Galeri (Placeholder) ---
-        # rx.vstack(
-        #     rx.heading("Galeri Acara Kami", size="7", margin_bottom="20px"),
-        #     rx.text(
-        #         "Lihat bagaimana kami memeriahkan berbagai acara dengan kualitas suara terbaik.",
-        #         margin_bottom="30px",
-        #         text_align="center",
-        #         max_width="700px",
-        #     ),
-        #     rx.hstack(
-        #         # Placeholder untuk 3 gambar
-        #         rx.box(rx.text("Foto Acara 1"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-        #         rx.box(rx.text("Foto Acara 2"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-        #         rx.box(rx.text("Foto Acara 3"), bg="gray.300", height="200px", width="300px", border_radius="md", display="flex", align_items="center", justify_content="center"),
-        #         spacing="6",
-        #         justify="center",
-        #         flex_wrap="wrap", # Agar responsif
-        #     ),
-        #     align="center",
-        #     padding_y="60px",
-        #     padding_x="20px",
-        #     width="100%",
-        #     bg="gray.50",
-        # ),
         
         rx.hstack(
             # Gambar Galeri Asli
@@ -429,10 +392,10 @@ def index() -> rx.Component:
 # --- Konfigurasi Aplikasi ---
 app = rx.App(
     theme=rx.theme(
-        appearance="light", # Bisa 'light', 'dark', atau 'system'
-        accent_color="blue", # Warna aksen utama
-        radius="medium" # Sudut elemen (misal: 'none', 'small', 'medium', 'large', 'full')
+        appearance="light",
+        accent_color="blue",
+        radius="medium"
     )
 )
-app.add_page(index)
+app.add_page(index, route="/", on_load=CarouselState.on_mount)
 # Tidak perlu compile() lagi di versi Reflex yang lebih baru jika dijalankan dengan `reflex run`
